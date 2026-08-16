@@ -1,10 +1,50 @@
 #include "mainwindow.h"
 
-const QString MainWindow::SETTINGS_FILE_NAME = "centerdot.ini";
-const int     MainWindow::DEFAULT_CROSSHAIR_SIZE = 5;
-const QColor  MainWindow::DEFAULT_CONTOUR_COLOR = QColor(Qt::black);
-const QColor  MainWindow::DEFAULT_FILL_COLOR = QColor(Qt::white);
+#include "crosshairrenderer.h"
 
+const QString MainWindow::SETTINGS_FILE_NAME = "centerdot.ini";
+
+namespace {
+
+// Reads an integer setting and falls back to the default whenever the stored
+// value is not a number or outside of the range the user interface allows.
+int readBoundedInt(QSettings &settings, const QString &key, int defaultValue, int minimum, int maximum)
+{
+    bool isInt = false;
+    const int value = settings.value(key, defaultValue).toInt(&isInt);
+
+    if (!isInt || value < minimum || value > maximum) {
+        return defaultValue;
+    }
+
+    return value;
+}
+
+QColor readColor(QSettings &settings, const QString &key, const QColor &defaultValue)
+{
+    const QString colorName = settings.value(key, defaultValue.name(QColor::HexArgb)).toString();
+
+    if (!QColor::isValidColor(colorName)) {
+        return defaultValue;
+    }
+
+    return QColor(colorName);
+}
+
+// A position from the settings file is only usable as long as the monitor it
+// points at is still attached.
+bool isOnAnyScreen(const QPoint &point)
+{
+    for (const QScreen *screen : QGuiApplication::screens()) {
+        if (screen->geometry().contains(point)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+} // namespace
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -21,8 +61,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // - WindowStaysOnTopHint for the window to stay on top
     setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
 
-    // set window size to given value
-    setCrosshairSize(DEFAULT_CROSSHAIR_SIZE);
+    // never take the focus when the window is shown, a crosshair popping up
+    // must not pull the player out of a running game
+    setAttribute(Qt::WA_ShowWithoutActivating);
 
     // draw no background, keep window transparent, background will be drawn
     setAutoFillBackground(false);
@@ -42,8 +83,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     }
     connect(winKeyboardHook, SIGNAL(keyPressed(DWORD)), this, SLOT(handlePressedKey(DWORD)));
 
-    settingsDialog = nullptr;
-
     // setup actions
     createActions();
 
@@ -60,12 +99,13 @@ MainWindow::~MainWindow()
 
 void MainWindow::paintEvent(QPaintEvent *)
 {
-    // paint window by drawing a rectangle with black border and white fill
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(currentSettings.contourColor); // TODO dynamic contour color
-    painter.setBrush(currentSettings.fillColor); // TODO dynamic filling color
-    painter.drawEllipse(0, 0, width(), height());
+
+    // the crosshair sits on the middle pixel of the window, the window itself
+    // is sized by applySettings() so the whole shape fits
+    const QPointF center(width() / 2 + 0.5, height() / 2 + 0.5);
+
+    CrosshairRenderer::paint(painter, currentSettings, center);
 }
 
 void MainWindow::loadSettings()
@@ -73,58 +113,89 @@ void MainWindow::loadSettings()
     qDebug() << "Trying to load program settings from" << settingsFileName;
 
     QSettings settings(settingsFileName, QSettings::IniFormat, this);
+    const SettingsData defaults;
 
-    // read window position
-    bool xIsInt = false;
-    bool yIsInt = false;
+    // read crosshair style
+    currentSettings.style = CrosshairRenderer::styleFromKey(
+        settings.value("style", CrosshairRenderer::styleKey(defaults.style)).toString(),
+        defaults.style
+    );
 
-    int x = settings.value("x", -1).toInt(&xIsInt);
-    int y = settings.value("y", -1).toInt(&yIsInt);
+    // read the measurements of the crosshair
+    currentSettings.crosshairSize = readBoundedInt(settings, "size", defaults.crosshairSize,
+                                                   CrosshairRenderer::MIN_SIZE,
+                                                   CrosshairRenderer::MAX_SIZE);
+    currentSettings.lineThickness = readBoundedInt(settings, "lineThickness", defaults.lineThickness,
+                                                   CrosshairRenderer::MIN_LINE_THICKNESS,
+                                                   CrosshairRenderer::MAX_LINE_THICKNESS);
+    currentSettings.gapSize       = readBoundedInt(settings, "gapSize", defaults.gapSize,
+                                                   CrosshairRenderer::MIN_GAP_SIZE,
+                                                   CrosshairRenderer::MAX_GAP_SIZE);
+    currentSettings.armLength     = readBoundedInt(settings, "armLength", defaults.armLength,
+                                                   CrosshairRenderer::MIN_ARM_LENGTH,
+                                                   CrosshairRenderer::MAX_ARM_LENGTH);
 
-    if (!xIsInt || !yIsInt || x < 0 || y < 0) {
-        qDebug() << "No windows position found, using default";
-        resetDot();
+    // read colors
+    currentSettings.contourColor = readColor(settings, "contourColor", defaults.contourColor);
+    currentSettings.fillColor    = readColor(settings, "fillColor", defaults.fillColor);
+
+    // read the position of the crosshair
+    bool positionIsKnown = false;
+    QPoint center;
+
+    if (settings.contains("centerX") && settings.contains("centerY")) {
+        bool xIsInt = false;
+        bool yIsInt = false;
+
+        center.setX(settings.value("centerX").toInt(&xIsInt));
+        center.setY(settings.value("centerY").toInt(&yIsInt));
+        positionIsKnown = xIsInt && yIsInt;
+    } else if (settings.contains("x") && settings.contains("y")) {
+        // settings files written before crosshair styles existed stored the top
+        // left corner of a window that was exactly as wide as the dot
+        bool xIsInt = false;
+        bool yIsInt = false;
+
+        const int left = settings.value("x").toInt(&xIsInt);
+        const int top  = settings.value("y").toInt(&yIsInt);
+
+        center = QPoint(left, top) + QPoint(currentSettings.crosshairSize / 2,
+                                            currentSettings.crosshairSize / 2);
+        positionIsKnown = xIsInt && yIsInt;
+    }
+
+    // a position on a monitor that is no longer attached would put the
+    // crosshair out of sight, only the position is dropped in that case
+    if (!positionIsKnown || !isOnAnyScreen(center)) {
+        qDebug() << "No usable crosshair position found, centering on the primary screen";
+        centerOnPrimaryScreen();
     } else {
-        qDebug() << "Windows position found: (x y) =" << x << y;
-        move(x, y);
+        qDebug() << "Crosshair position found: (x y) =" << center.x() << center.y();
+        currentSettings.xPosition = center.x();
+        currentSettings.yPosition = center.y();
     }
-    currentSettings.xPosition = pos().x();
-    currentSettings.yPosition = pos().y();
 
-    // read crosshair size
-    bool crosshairSizeIsInt = false;
-    int crosshairSizeRead = settings.value("size", DEFAULT_CROSSHAIR_SIZE).toInt(&crosshairSizeIsInt);
-    if (!crosshairSizeIsInt || crosshairSizeRead < 3 || crosshairSizeRead > 20) {
-        crosshairSizeRead = DEFAULT_CROSSHAIR_SIZE;
-    }
-    currentSettings.crosshairSize = crosshairSizeRead;
-    setCrosshairSize(crosshairSizeRead);
-
-    // read contour color
-    QString contourColorRead = settings.value("contourColor", DEFAULT_CONTOUR_COLOR.name()).toString();
-    if (!QColor::isValidColor(contourColorRead)) {
-        contourColorRead = DEFAULT_CONTOUR_COLOR.name();
-    }
-    currentSettings.contourColor = QColor(contourColorRead);
-
-    // read fill color
-    QString fillColorRead = settings.value("fillColor", DEFAULT_FILL_COLOR.name()).toString();
-    if (!QColor::isValidColor(fillColorRead)) {
-        fillColorRead = DEFAULT_FILL_COLOR.name();
-    }
-    currentSettings.fillColor = QColor(fillColorRead);
+    applySettings();
 }
 
 void MainWindow::saveSettings()
 {
     QSettings settings(settingsFileName, QSettings::IniFormat, this);
 
-    // window position
-    settings.setValue("x", pos().x());
-    settings.setValue("y", pos().y());
+    // crosshair position, stored as the point the crosshair is centered on
+    settings.setValue("centerX", currentSettings.xPosition);
+    settings.setValue("centerY", currentSettings.yPosition);
 
-    // crosshair size
+    // the top left corner written by older versions, superseded by centerX/centerY
+    settings.remove("x");
+    settings.remove("y");
+
+    // crosshair shape
+    settings.setValue("style", CrosshairRenderer::styleKey(currentSettings.style));
     settings.setValue("size", currentSettings.crosshairSize);
+    settings.setValue("lineThickness", currentSettings.lineThickness);
+    settings.setValue("gapSize", currentSettings.gapSize);
+    settings.setValue("armLength", currentSettings.armLength);
 
     // colors
     settings.setValue("contourColor", currentSettings.contourColor.name(QColor::HexArgb));
@@ -140,40 +211,53 @@ void MainWindow::saveSettings()
     }
 }
 
-void MainWindow::updatedSettings()
+void MainWindow::acceptSettingsFromDialog()
 {
     currentSettings = settingsDialog->getSettingsData();
-
-    QPoint newPoint(currentSettings.xPosition, currentSettings.yPosition);
-    setCrosshairPosition(newPoint);
-
-    QPoint crosshairPos = getCrosshairPosition();
-    setCrosshairSize(currentSettings.crosshairSize);
-    setCrosshairPosition(crosshairPos);
-
-    showMinimized();
-    showNormal();
+    applySettings();
 
     qDebug() << "Updated settings";
+}
+
+void MainWindow::applySettings()
+{
+    // every style needs a window of its own size, a cross with long arms takes
+    // up a lot more room than a plain dot
+    const int side = CrosshairRenderer::boundingSide(currentSettings);
+    setFixedSize(side, side);
+
+    setCrosshairPosition(QPoint(currentSettings.xPosition, currentSettings.yPosition));
+
+    // A translucent window keeps remains of the former crosshair on screen
+    // after a resize, only going through hide() clears them. Thanks to the
+    // WA_ShowWithoutActivating attribute this does not pull the focus away
+    // from the running game, unlike the showMinimized()/showNormal() of
+    // earlier versions.
+    if (isVisible()) {
+        hide();
+        show();
+    }
+
+    update();
 }
 
 void MainWindow::handlePressedArrowKey(DWORD pressedKey)
 {
     switch (pressedKey) {
         case VK_UP:
-            moveNorth();
+            moveCrosshairBy(0, -1);
             break;
 
         case VK_DOWN:
-            moveSouth();
+            moveCrosshairBy(0, 1);
             break;
 
         case VK_LEFT:
-            moveWest();
+            moveCrosshairBy(-1, 0);
             break;
 
         case VK_RIGHT:
-            moveEast();
+            moveCrosshairBy(1, 0);
             break;
 
         case VK_RETURN:
@@ -220,7 +304,7 @@ void MainWindow::adjustDot(bool checked)
             QMessageBox::warning(this, tr("Warning"), tr("Failed to establish hook to keyboard."));
             return;
         }
-        
+
         systrayIcon->showMessage(tr("Center Dot"), tr("Use the arrow keys on your keyboard to adjust the crosshair position. If you're done you can press Return or uncheck 'Adjust crosshair' again in the menu."));
 
         connect(keyboardHookInstance, SIGNAL(keyPressed(DWORD)), this, SLOT(handlePressedArrowKey(DWORD)));
@@ -237,10 +321,15 @@ void MainWindow::showSettingsDialog()
 {
     if (settingsDialog == nullptr) {
         settingsDialog = new SettingsDialog(this);
-        connect(settingsDialog, SIGNAL(accepted()), this, SLOT(updatedSettings()));
+        connect(settingsDialog, SIGNAL(accepted()), this, SLOT(acceptSettingsFromDialog()));
     }
     settingsDialog->setSettingsData(currentSettings);
     settingsDialog->show();
+
+    // the crosshair window stays on top, make sure the dialog does not end up
+    // behind it or behind the game
+    settingsDialog->raise();
+    settingsDialog->activateWindow();
 }
 
 void MainWindow::resetDot()
@@ -249,14 +338,19 @@ void MainWindow::resetDot()
         settingsDialog->close();
     }
 
-    currentSettings.crosshairSize = DEFAULT_CROSSHAIR_SIZE;
-    currentSettings.contourColor = DEFAULT_CONTOUR_COLOR;
-    currentSettings.fillColor = DEFAULT_FILL_COLOR;
+    // back to the built in defaults, position included
+    currentSettings = SettingsData();
+    centerOnPrimaryScreen();
 
-    QPoint screenCenterPoint = QDesktopWidget().availableGeometry().center();
-    setCrosshairPosition(screenCenterPoint);
+    applySettings();
+}
 
-    updatedSettings();
+void MainWindow::centerOnPrimaryScreen()
+{
+    const QPoint screenCenterPoint = QGuiApplication::primaryScreen()->availableGeometry().center();
+
+    currentSettings.xPosition = screenCenterPoint.x();
+    currentSettings.yPosition = screenCenterPoint.y();
 }
 
 void MainWindow::showAboutDlg()
@@ -324,34 +418,12 @@ void MainWindow::createSystrayIcon()
     systrayIcon->show();
 }
 
-void MainWindow::moveNorth()
+void MainWindow::moveCrosshairBy(int deltaX, int deltaY)
 {
-    QPoint position = pos();
-    position.setY(position.y() - 1);
-    move(position);
-    qDebug() << "Moved north, new position:" << position;
-}
+    currentSettings.xPosition += deltaX;
+    currentSettings.yPosition += deltaY;
 
-void MainWindow::moveSouth()
-{
-    QPoint position = pos();
-    position.setY(position.y() + 1);
-    move(position);
-    qDebug() << "Moved south, new position:" << position;
-}
+    setCrosshairPosition(QPoint(currentSettings.xPosition, currentSettings.yPosition));
 
-void MainWindow::moveEast()
-{
-    QPoint position = pos();
-    position.setX(position.x() + 1);
-    move(position);
-    qDebug() << "Moved east, new position:" << position;
-}
-
-void MainWindow::moveWest()
-{
-    QPoint position = pos();
-    position.setX(position.x() - 1);
-    move(position);
-    qDebug() << "Moved west, new position:" << position;
+    qDebug() << "Moved crosshair, new center:" << currentSettings.xPosition << currentSettings.yPosition;
 }

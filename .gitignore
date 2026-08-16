@@ -22,6 +22,7 @@
 
 # CMake
 cmake-build-*/
+build/
 .idea/.name
 .idea/misc.xml
 .idea/modules.xml

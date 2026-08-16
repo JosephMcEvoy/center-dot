@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
         GWL_EXSTYLE,
         GetWindowLong(winHandle, GWL_EXSTYLE) | WS_EX_TRANSPARENT // make window with transparent background
     );
-    ShowWindow(winHandle, SW_SHOW);
+    ShowWindow(winHandle, SW_SHOWNOACTIVATE); // showing the crosshair must not steal the focus
 
     return app.exec();
 }
