@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>560</width>
+    <height>430</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,255 +15,438 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QFormLayout" name="dialogLayout">
-     <item row="3" column="0">
-      <widget class="QLabel" name="crosshairSizeLbl">
-       <property name="text">
-        <string>Crosshair size:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <layout class="QHBoxLayout" name="crosshairSizeHbox">
-       <item>
-        <widget class="QSlider" name="crosshairSizeSlider">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>10</number>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="tickPosition">
-          <enum>QSlider::TicksBelow</enum>
-         </property>
-         <property name="tickInterval">
-          <number>1</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="crosshairSizeValueLbl">
+    <layout class="QHBoxLayout" name="mainHbox">
+     <item>
+      <layout class="QFormLayout" name="dialogLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="positionLbl">
          <property name="text">
-          <string>3 px</string>
+          <string>Position:</string>
          </property>
         </widget>
        </item>
-      </layout>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="contourColorLbl">
-       <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
-       </property>
-       <property name="text">
-        <string>Contour color:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <layout class="QHBoxLayout" name="contourColorHbox">
-       <item>
-        <widget class="QFrame" name="contourColorBox">
-         <property name="autoFillBackground">
-          <bool>true</bool>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::Box</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-        </widget>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="positionHbox">
+         <item>
+          <widget class="QLabel" name="xLbl">
+           <property name="text">
+            <string>x:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="xEdit"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="yLbl">
+           <property name="text">
+            <string>y:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="yEdit"/>
+         </item>
+        </layout>
        </item>
-       <item>
-        <widget class="QPushButton" name="selectContourColorBtn">
-         <property name="text">
-          <string>Select...</string>
-         </property>
-        </widget>
+       <item row="1" column="1">
+        <layout class="QGridLayout" name="dpadGridLayout">
+         <item row="2" column="0">
+          <spacer name="dpadLeftSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="2" column="4">
+          <spacer name="dpadRightSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="2">
+          <widget class="QToolButton" name="upBtn">
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="arrowType">
+            <enum>Qt::UpArrow</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QToolButton" name="leftBtn">
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="arrowType">
+            <enum>Qt::LeftArrow</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QToolButton" name="rightBtn">
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="arrowType">
+            <enum>Qt::RightArrow</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="2">
+          <widget class="QToolButton" name="downBtn">
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="arrowType">
+            <enum>Qt::DownArrow</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
-      </layout>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="fillColorLbl">
-       <property name="text">
-        <string>Fill color:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <layout class="QHBoxLayout" name="fillColorHbox">
-       <item>
-        <widget class="QFrame" name="fillColorBox">
-         <property name="autoFillBackground">
-          <bool>true</bool>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::Box</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="selectFillColorBtn">
-         <property name="text">
-          <string>Select...</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="positionLbl">
-       <property name="text">
-        <string>Position:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <layout class="QHBoxLayout" name="positionHbox">
-       <item>
-        <widget class="QLabel" name="xLbl">
-         <property name="text">
-          <string>x:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="xEdit"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="yLbl">
-         <property name="text">
-          <string>y:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="yEdit"/>
-       </item>
-      </layout>
-     </item>
-     <item row="1" column="1">
-      <layout class="QGridLayout" name="dpadGridLayout">
        <item row="2" column="0">
-        <spacer name="dpadLeftSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="2" column="4">
-        <spacer name="dpadRightSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="2">
-        <widget class="QToolButton" name="upBtn">
-         <property name="minimumSize">
-          <size>
-           <width>25</width>
-           <height>25</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>16777215</height>
-          </size>
-         </property>
+        <widget class="QLabel" name="styleLbl">
          <property name="text">
-          <string>...</string>
-         </property>
-         <property name="arrowType">
-          <enum>Qt::UpArrow</enum>
+          <string>Crosshair style:</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QToolButton" name="leftBtn">
-         <property name="minimumSize">
-          <size>
-           <width>25</width>
-           <height>25</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>16777215</height>
-          </size>
-         </property>
+        <widget class="QComboBox" name="styleCombo"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="crosshairSizeLbl">
          <property name="text">
-          <string>...</string>
-         </property>
-         <property name="arrowType">
-          <enum>Qt::LeftArrow</enum>
+          <string>Dot size:</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="3">
-        <widget class="QToolButton" name="rightBtn">
-         <property name="minimumSize">
-          <size>
-           <width>25</width>
-           <height>25</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>16777215</height>
-          </size>
-         </property>
+       <item row="3" column="1">
+        <layout class="QHBoxLayout" name="crosshairSizeHbox">
+         <item>
+          <widget class="QSlider" name="crosshairSizeSlider">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>30</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksBelow</enum>
+           </property>
+           <property name="tickInterval">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="crosshairSizeValueLbl">
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>5 px</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lineThicknessLbl">
          <property name="text">
-          <string>...</string>
-         </property>
-         <property name="arrowType">
-          <enum>Qt::RightArrow</enum>
+          <string>Line thickness:</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QToolButton" name="downBtn">
-         <property name="minimumSize">
-          <size>
-           <width>25</width>
-           <height>25</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>16777215</height>
-          </size>
-         </property>
+       <item row="4" column="1">
+        <layout class="QHBoxLayout" name="lineThicknessHbox">
+         <item>
+          <widget class="QSlider" name="lineThicknessSlider">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>10</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksBelow</enum>
+           </property>
+           <property name="tickInterval">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lineThicknessValueLbl">
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>2 px</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="gapSizeLbl">
          <property name="text">
-          <string>...</string>
-         </property>
-         <property name="arrowType">
-          <enum>Qt::DownArrow</enum>
+          <string>Center gap:</string>
          </property>
         </widget>
+       </item>
+       <item row="5" column="1">
+        <layout class="QHBoxLayout" name="gapSizeHbox">
+         <item>
+          <widget class="QSlider" name="gapSizeSlider">
+           <property name="minimum">
+            <number>0</number>
+           </property>
+           <property name="maximum">
+            <number>30</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksBelow</enum>
+           </property>
+           <property name="tickInterval">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="gapSizeValueLbl">
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>4 px</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="armLengthLbl">
+         <property name="text">
+          <string>Arm length:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <layout class="QHBoxLayout" name="armLengthHbox">
+         <item>
+          <widget class="QSlider" name="armLengthSlider">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>40</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksBelow</enum>
+           </property>
+           <property name="tickInterval">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="armLengthValueLbl">
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>7 px</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="contourColorLbl">
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+         <property name="text">
+          <string>Contour color:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <layout class="QHBoxLayout" name="contourColorHbox">
+         <item>
+          <widget class="QFrame" name="contourColorBox">
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="selectContourColorBtn">
+           <property name="text">
+            <string>Select...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="fillColorLbl">
+         <property name="text">
+          <string>Fill color:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <layout class="QHBoxLayout" name="fillColorHbox">
+         <item>
+          <widget class="QFrame" name="fillColorBox">
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="selectFillColorBtn">
+           <property name="text">
+            <string>Select...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="previewVbox">
+       <item>
+        <widget class="QLabel" name="previewTitleLbl">
+         <property name="text">
+          <string>Preview:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="previewLbl">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="previewSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </item>

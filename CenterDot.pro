@@ -16,10 +16,12 @@ CONFIG += static
 SOURCES += src/main.cpp\
     src/mainwindow.cpp \
     src/winkeyboardhook.cpp \
+    src/crosshairrenderer.cpp \
     src/settingsdialog.cpp
 
 HEADERS  += src/mainwindow.h \
     src/winkeyboardhook.h \
+    src/crosshairrenderer.h \
     src/settingsdialog.h \
     src/settingsdata.h
 

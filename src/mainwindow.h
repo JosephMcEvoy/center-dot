@@ -8,7 +8,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QRect>
-#include <QDesktopWidget>
+#include <QScreen>
 #include <QSystemTrayIcon>
 #include <QApplication>
 #include <QAction>
@@ -37,7 +37,7 @@ protected:
 private slots:
     void loadSettings();
     void saveSettings();
-    void updatedSettings();
+    void acceptSettingsFromDialog();
     void handlePressedArrowKey(DWORD pressedKey);
     void handlePressedKey(DWORD pressedKey);
     void toggleWindowVisibility();
@@ -49,9 +49,6 @@ private slots:
 
 private:
     static const QString SETTINGS_FILE_NAME;
-    static const int     DEFAULT_CROSSHAIR_SIZE;
-    static const QColor  DEFAULT_CONTOUR_COLOR;
-    static const QColor  DEFAULT_FILL_COLOR;
 
     QString settingsFileName;
 
@@ -68,27 +65,19 @@ private:
 
     SettingsData currentSettings;
 
-    SettingsDialog *settingsDialog;
-
-
+    SettingsDialog *settingsDialog = nullptr;
 
     void createActions();
     void createSystrayIcon();
-    void moveNorth();
-    void moveSouth();
-    void moveWest();
-    void moveEast();
 
-    inline int getCrosshairSize()
-    {
-        // assuming the crosshair is of quadratic dimension and width() and height() are equal
-        return width();
-    }
+    // Resizes and repositions the window so it matches currentSettings.
+    void applySettings();
 
-    inline void setCrosshairSize(int size)
-    {
-        setFixedSize(size, size);
-    }
+    // Moves the crosshair back to the middle of the primary screen.
+    void centerOnPrimaryScreen();
+
+    // Shifts the crosshair by the given amount of pixels.
+    void moveCrosshairBy(int deltaX, int deltaY);
 
     inline QPoint getCrosshairPosition()
     {
@@ -98,7 +87,7 @@ private:
         );
     }
 
-    inline void setCrosshairPosition(QPoint &centerPoint)
+    inline void setCrosshairPosition(const QPoint &centerPoint)
     {
         move(
             centerPoint.x() - width() / 2,
