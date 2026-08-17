@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "version_number.h"
 
 #include <qt_windows.h>
 
@@ -11,7 +12,7 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("atomkraftzwerg.de");
     app.setApplicationName("Center Dot");
     app.setApplicationDisplayName("Center Dot");
-    app.setApplicationVersion("1.0.2");
+    app.setApplicationVersion(CENTER_DOT_VERSION_STRING);
 
     qDebug() << "Starting" << app.applicationDisplayName() << app.applicationVersion();
 
