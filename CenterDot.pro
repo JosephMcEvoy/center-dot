@@ -1,4 +1,4 @@
-VERSION = 1.1.0
+VERSION = 1.1.1
 QMAKE_TARGET_COMPANY = "Atomkraftzwerg"
 QMAKE_TARGET_PRODUCT = "CenterDot"
 QMAKE_TARGET_DESCRIPTION = "Shows a centered crosshair as a layer above your game."

@@ -1,7 +1,7 @@
 // the generated version number for CenterDot, filled in by CMake
 #define CENTER_DOT_VERSION_MAJOR 1
 #define CENTER_DOT_VERSION_MINOR 1
-#define CENTER_DOT_VERSION_REVISION 0
+#define CENTER_DOT_VERSION_REVISION 1
 
 #define CENTER_DOT_STRINGIFY_(x) #x
 #define CENTER_DOT_STRINGIFY(x) CENTER_DOT_STRINGIFY_(x)

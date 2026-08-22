@@ -60,8 +60,10 @@ Four measurements shape the crosshair. Only the ones the selected style actually
 | --- | --- | --- |
 | Dot size | 1-30 px | Diameter of the dot resp. of the surrounding circle. |
 | Line thickness | 1-10 px | Stroke width of the lines a crosshair is built from. |
-| Center gap | 0-30 px | Distance between the aiming point and where the lines start. |
+| Center gap | 0-30 px | How far from the aiming point each line begins. A gap of 1 leaves exactly the aiming pixel clear, a gap of 0 fills it. |
 | Arm length | 1-40 px | Length of a single line of the crosshair. |
+
+Every one of these is counted in whole screen pixels: a line of 1 px is one fully lit pixel, not a grey smudge across two, and an arm of 8 px reaches exactly as far to the left as it does to the right. The only shapes that cannot land on whole pixels are the diagonals of the X-shape and the chevron, which are antialiased along their length, and any measurement with an even number of pixels, which has no middle pixel to sit on and so leans one pixel towards the top left.
 
 Settings are stored in `centerdot.ini` below your Windows application data directory and are written when the program exits.
 
