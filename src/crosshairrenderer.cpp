@@ -28,16 +28,57 @@ struct Geometry {
     qreal halfExtent = 0.0;
 };
 
-// Horizontal bar of the given thickness, centered on axisY, spanning [xFrom, xTo).
-QRect horizontalBar(int axisY, int thickness, int xFrom, int xTo)
+// Everything that is not a diagonal is laid out in whole pixels, counted
+// outwards from the pixel the crosshair is centered on. Integer coordinates sit
+// on pixel edges, not in pixel middles, so pixel n covers [n, n + 1). Sticking
+// to whole pixels is what lets a measurement of "n px" cover n pixels instead
+// of being smeared over n + 1 of them by antialiasing.
+
+// First pixel of a bar of the given thickness laid across the axis pixel. An
+// odd thickness sits centered on that pixel, an even one cannot and leans
+// towards the smaller coordinate. Every shape uses this same rule, so that a
+// dot and the arms of a cross agree on where the middle is.
+int barStart(int axis, int thickness)
 {
-    return QRect(xFrom, axisY - thickness / 2, xTo - xFrom, thickness);
+    return axis - thickness / 2;
 }
 
-// Vertical bar of the given thickness, centered on axisX, spanning [yFrom, yTo).
-QRect verticalBar(int axisX, int thickness, int yFrom, int yTo)
+// First pixel of a run of count pixels that starts offset pixels away from the
+// center pixel and grows outwards. An offset of 0 starts on the center pixel
+// itself, an offset of 1 on the pixel next to it.
+//
+// The negative direction has to be counted back from the far end. Deriving it
+// from the center instead is what used to make an arm reach one pixel further
+// than its own mirror image, leaving the crosshair sitting half a pixel up and
+// to the left of the point it is supposed to mark.
+int runStart(int centerPixel, int direction, int offset, int count)
 {
-    return QRect(axisX - thickness / 2, yFrom, thickness, yTo - yFrom);
+    return direction > 0 ? centerPixel + offset
+                         : centerPixel - offset - count + 1;
+}
+
+// The square of whole pixels a round shape of the given diameter fills.
+QRect pixelSquare(int cx, int cy, int diameter)
+{
+    return QRect(barStart(cx, diameter), barStart(cy, diameter), diameter, diameter);
+}
+
+// Adds a filled disc covering the given square of whole pixels. Below three
+// pixels there is no room for a circle to read as round, and antialiasing a
+// curve that small only yields a grey smudge, so the square is taken as it is.
+// That is what makes a dot of "1 px" a single fully lit pixel rather than a
+// faint one at three quarters coverage.
+void addDisc(QPainterPath &path, const QRect &square)
+{
+    if (square.width() < 1) {
+        return;
+    }
+
+    if (square.width() < 3) {
+        path.addRect(square);
+    } else {
+        path.addEllipse(square);
+    }
 }
 
 // Adds a chain of line segments, drawn with the given thickness, to a path.
@@ -60,33 +101,36 @@ void addStrokedLines(QPainterPath &path, const QVector<QPointF> &points, int thi
     path.addPath(stroker.createStroke(line));
 }
 
-// Adds a circle of the given diameter around the center to a path.
-void addCircle(QPainterPath &path, const QPointF &center, qreal diameter)
-{
-    if (diameter <= 0.0) {
-        return;
-    }
-    path.addEllipse(center, diameter / 2.0, diameter / 2.0);
-}
-
-// Adds the four arms of a cross, each one reaching from innerRadius to
-// outerRadius. Directions that are switched off are skipped, that is how the
-// T shape drops its upper arm.
+// Adds the four arms of a cross. Every arm is armLength pixels long and begins
+// gap pixels away from the center pixel, so a gap of 0 grows out of the aiming
+// point itself and keeps a plain cross solid, while a gap of 1 leaves exactly
+// the center pixel clear. Directions that are switched off are skipped, that is
+// how the T shape drops its upper arm.
 void addCrossArms(QPainterPath &path, int cx, int cy, int thickness,
-                  int innerRadius, int outerRadius, bool up, bool down, bool left, bool right)
+                  int gap, int armLength, bool up, bool down, bool left, bool right)
 {
+    const int acrossX = barStart(cx, thickness);
+    const int acrossY = barStart(cy, thickness);
+
     if (up) {
-        path.addRect(verticalBar(cx, thickness, cy - outerRadius, cy - innerRadius));
+        path.addRect(QRect(acrossX, runStart(cy, -1, gap, armLength), thickness, armLength));
     }
     if (down) {
-        path.addRect(verticalBar(cx, thickness, cy + innerRadius, cy + outerRadius));
+        path.addRect(QRect(acrossX, runStart(cy, 1, gap, armLength), thickness, armLength));
     }
     if (left) {
-        path.addRect(horizontalBar(cy, thickness, cx - outerRadius, cx - innerRadius));
+        path.addRect(QRect(runStart(cx, -1, gap, armLength), acrossY, armLength, thickness));
     }
     if (right) {
-        path.addRect(horizontalBar(cy, thickness, cx + innerRadius, cx + outerRadius));
+        path.addRect(QRect(runStart(cx, 1, gap, armLength), acrossY, armLength, thickness));
     }
+}
+
+// How far the outermost pixel of such an arm sits from the center pixel. A
+// crosshair whose arms are shorter than they are thick is as wide as the bar.
+int armReach(int gap, int armLength, int thickness)
+{
+    return qMax(gap + armLength - 1, thickness / 2);
 }
 
 // Builds all shapes of the configured crosshair around the center pixel (cx, cy).
@@ -100,7 +144,7 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
     const int gap       = qBound(MIN_GAP_SIZE, settings.gapSize, MAX_GAP_SIZE);
     const int arm       = qBound(MIN_ARM_LENGTH, settings.armLength, MAX_ARM_LENGTH);
 
-    // the center of the (cx, cy) pixel, round shapes are drawn around it
+    // the center of the (cx, cy) pixel, the diagonals are drawn around it
     const QPointF center(cx + 0.5, cy + 0.5);
 
     Geometry geometry;
@@ -112,52 +156,55 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
 
     switch (settings.style) {
         case CrosshairStyle::Dot: {
-            addCircle(geometry.solid, center, size);
-            geometry.halfExtent = size / 2.0;
+            addDisc(geometry.solid, pixelSquare(cx, cy, size));
+            geometry.halfExtent = size / 2;
             break;
         }
 
         case CrosshairStyle::Circle: {
-            addCircle(geometry.ring, center, size);
-            addCircle(geometry.ring, center, size - 2.0 * thickness); // punches the hole
-            geometry.halfExtent = size / 2.0;
+            addDisc(geometry.ring, pixelSquare(cx, cy, size));
+
+            // Punches the hole. Snapping it by the same rule as the outer
+            // circle leaves a wall of exactly thickness pixels all around.
+            addDisc(geometry.ring, pixelSquare(cx, cy, size - 2 * thickness));
+            geometry.halfExtent = size / 2;
             break;
         }
 
         case CrosshairStyle::DotInCircle: {
-            addCircle(geometry.ring, center, size);
-            const qreal holeDiameter = size - 2.0 * thickness;
-            addCircle(geometry.ring, center, holeDiameter);
+            const int hole = size - 2 * thickness;
+            addDisc(geometry.ring, pixelSquare(cx, cy, size));
+            addDisc(geometry.ring, pixelSquare(cx, cy, hole));
 
             // a dot that stays clear of the surrounding ring
-            addCircle(geometry.solid, center, qMax(2.0, holeDiameter / 3.0));
-            geometry.halfExtent = size / 2.0;
+            addDisc(geometry.solid, pixelSquare(cx, cy, qMax(1, hole / 3)));
+            geometry.halfExtent = size / 2;
             break;
         }
 
         case CrosshairStyle::Cross: {
             addCrossArms(geometry.solid, cx, cy, thickness, 0, arm, true, true, true, true);
-            geometry.halfExtent = qMax(qreal(arm), halfThickness);
+            geometry.halfExtent = armReach(0, arm, thickness);
             break;
         }
 
         case CrosshairStyle::CrossWithGap: {
-            addCrossArms(geometry.solid, cx, cy, thickness, gap, gap + arm, true, true, true, true);
-            geometry.halfExtent = qMax(qreal(gap + arm), halfThickness);
+            addCrossArms(geometry.solid, cx, cy, thickness, gap, arm, true, true, true, true);
+            geometry.halfExtent = armReach(gap, arm, thickness);
             break;
         }
 
         case CrosshairStyle::CrossWithGapAndDot: {
-            addCrossArms(geometry.solid, cx, cy, thickness, gap, gap + arm, true, true, true, true);
-            addCircle(geometry.solid, center, size);
-            geometry.halfExtent = qMax(qreal(gap + arm), size / 2.0);
+            addCrossArms(geometry.solid, cx, cy, thickness, gap, arm, true, true, true, true);
+            addDisc(geometry.solid, pixelSquare(cx, cy, size));
+            geometry.halfExtent = qMax(armReach(gap, arm, thickness), size / 2);
             break;
         }
 
         case CrosshairStyle::TShape: {
             // no upper arm, keeps the view above the aiming point clear
-            addCrossArms(geometry.solid, cx, cy, thickness, gap, gap + arm, false, true, true, true);
-            geometry.halfExtent = qMax(qreal(gap + arm), halfThickness);
+            addCrossArms(geometry.solid, cx, cy, thickness, gap, arm, false, true, true, true);
+            geometry.halfExtent = armReach(gap, arm, thickness);
             break;
         }
 
@@ -185,7 +232,13 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
                 center,
                 center + QPointF(reach, reach)
             }, thickness);
-            geometry.halfExtent = reach + halfThickness;
+
+            // The mitre at the tip runs further out than the arms do: the two
+            // segments meet at a right angle, which pushes the joint out by
+            // half the thickness over sin(45 degrees). Sizing the window by the
+            // arms alone used to cut the point of the arrow off.
+            geometry.halfExtent = qMax(halfThickness / DIAGONAL_REACH,
+                                       reach + halfThickness * DIAGONAL_REACH);
             break;
         }
 
@@ -195,18 +248,21 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
 
             for (int dx = -1; dx <= 1; dx += 2) {
                 for (int dy = -1; dy <= 1; dy += 2) {
-                    const int cornerX = cx + dx * corner;
-                    const int cornerY = cy + dy * corner;
+                    // The legs run inwards from the corner, and each bar lies on
+                    // the inner side of it, so that opposite brackets end up the
+                    // same distance from the aiming point.
+                    const int acrossX = runStart(cx + dx * corner, -dx, 0, thickness);
+                    const int acrossY = runStart(cy + dy * corner, -dy, 0, thickness);
 
-                    // the legs run from the corner towards the middle of the edges
-                    const int xFrom = dx < 0 ? cornerX : cornerX - arm;
-                    const int yFrom = dy < 0 ? cornerY : cornerY - arm;
-
-                    geometry.solid.addRect(horizontalBar(cornerY, thickness, xFrom, xFrom + arm));
-                    geometry.solid.addRect(verticalBar(cornerX, thickness, yFrom, yFrom + arm));
+                    geometry.solid.addRect(
+                        QRect(runStart(cx, dx, gap + 1, arm), acrossY, arm, thickness));
+                    geometry.solid.addRect(
+                        QRect(acrossX, runStart(cy, dy, gap + 1, arm), thickness, arm));
                 }
             }
-            geometry.halfExtent = corner + halfThickness;
+            // A bar thicker than the bracket stands from the middle reaches
+            // past the aiming point and out the other side.
+            geometry.halfExtent = qMax(corner, thickness - 1 - corner);
             break;
         }
     }
