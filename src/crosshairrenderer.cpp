@@ -2,7 +2,6 @@
 
 #include <QCoreApplication>
 #include <QPainterPath>
-#include <QPainterPathStroker>
 #include <QRect>
 #include <QtMath>
 
@@ -28,11 +27,11 @@ struct Geometry {
     qreal halfExtent = 0.0;
 };
 
-// Everything that is not a diagonal is laid out in whole pixels, counted
-// outwards from the pixel the crosshair is centered on. Integer coordinates sit
-// on pixel edges, not in pixel middles, so pixel n covers [n, n + 1). Sticking
-// to whole pixels is what lets a measurement of "n px" cover n pixels instead
-// of being smeared over n + 1 of them by antialiasing.
+// Everything is laid out in whole pixels, counted outwards from the pixel the
+// crosshair is centered on. Integer coordinates sit on pixel edges, not in pixel
+// middles, so pixel n covers [n, n + 1). Sticking to whole pixels is what lets a
+// measurement of "n px" cover n pixels instead of being smeared over n + 1 of
+// them by antialiasing.
 
 // First pixel of a bar of the given thickness laid across the axis pixel. An
 // odd thickness sits centered on that pixel, an even one cannot and leans
@@ -81,24 +80,39 @@ void addDisc(QPainterPath &path, const QRect &square)
     }
 }
 
-// Adds a chain of line segments, drawn with the given thickness, to a path.
-void addStrokedLines(QPainterPath &path, const QVector<QPointF> &points, int thickness)
+// Adds a diagonal arm running outwards from the center pixel in the (dirX,
+// dirY) direction, as a staircase of whole pixels: step k sits on the pixel k
+// steps away along both axes and carries a run of thickness pixels laid across
+// it by the same rule the straight bars use. Both ends are included, so an arm
+// from step 0 grows out of the center pixel itself.
+//
+// Stroking a line instead is what used to make a diagonal miss its measurement.
+// A stroke width is taken perpendicular to the line, and across the screen a 45
+// degree band is sqrt(2) times as wide as that, so "1 px" came out 1.41 px wide
+// and, sitting on no pixel edge at all, never lit a single pixel fully: the arm
+// showed up as a pair of half lit ones the contour underneath shone through.
+void addDiagonalArm(QPainterPath &path, int cx, int cy, int dirX, int dirY,
+                    int firstStep, int lastStep, int thickness)
 {
-    if (points.size() < 2) {
-        return;
+    for (int step = firstStep; step <= lastStep; ++step) {
+        path.addRect(QRect(barStart(cx + dirX * step, thickness),
+                           cy + dirY * step, thickness, 1));
     }
+}
 
-    QPainterPath line;
-    line.moveTo(points.first());
-    for (int i = 1; i < points.size(); ++i) {
-        line.lineTo(points.at(i));
-    }
+// How far the outermost pixel of such an arm sits from the center pixel. The
+// run laid across the last step reaches thickness / 2 further out sideways.
+int diagonalReach(int lastStep, int thickness)
+{
+    return lastStep + thickness / 2;
+}
 
-    QPainterPathStroker stroker;
-    stroker.setWidth(thickness);
-    stroker.setCapStyle(Qt::FlatCap);
-    stroker.setJoinStyle(Qt::MiterJoin);
-    path.addPath(stroker.createStroke(line));
+// The step a point that many pixels along a diagonal falls on. Gap and arm
+// length stay measured along the line, the way they read in the settings
+// dialog, so switching to whole pixels does not resize anybody's crosshair.
+int diagonalStep(int lengthAlongLine)
+{
+    return qRound(lengthAlongLine * DIAGONAL_REACH);
 }
 
 // Adds the four arms of a cross. Every arm is armLength pixels long and begins
@@ -144,15 +158,9 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
     const int gap       = qBound(MIN_GAP_SIZE, settings.gapSize, MAX_GAP_SIZE);
     const int arm       = qBound(MIN_ARM_LENGTH, settings.armLength, MAX_ARM_LENGTH);
 
-    // the center of the (cx, cy) pixel, the diagonals are drawn around it
-    const QPointF center(cx + 0.5, cy + 0.5);
-
     Geometry geometry;
     geometry.ring.setFillRule(Qt::OddEvenFill);
     geometry.solid.setFillRule(Qt::WindingFill);
-
-    // half the thickness of a bar, the amount an arm sticks out sideways
-    const qreal halfThickness = thickness / 2.0;
 
     switch (settings.style) {
         case CrosshairStyle::Dot: {
@@ -209,36 +217,29 @@ Geometry buildGeometry(const SettingsData &settings, int cx, int cy)
         }
 
         case CrosshairStyle::XShape: {
-            const qreal innerReach = gap * DIAGONAL_REACH;
-            const qreal outerReach = (gap + arm) * DIAGONAL_REACH;
+            const int firstStep = diagonalStep(gap);
+            const int lastStep  = diagonalStep(gap + arm);
 
             for (int dx = -1; dx <= 1; dx += 2) {
                 for (int dy = -1; dy <= 1; dy += 2) {
-                    addStrokedLines(geometry.solid, {
-                        center + QPointF(dx * innerReach, dy * innerReach),
-                        center + QPointF(dx * outerReach, dy * outerReach)
-                    }, thickness);
+                    addDiagonalArm(geometry.solid, cx, cy, dx, dy,
+                                   firstStep, lastStep, thickness);
                 }
             }
-            geometry.halfExtent = outerReach + halfThickness;
+            geometry.halfExtent = diagonalReach(lastStep, thickness);
             break;
         }
 
         case CrosshairStyle::Chevron: {
-            // an arrow head with its tip on the aiming point, opening downwards
-            const qreal reach = arm * DIAGONAL_REACH;
-            addStrokedLines(geometry.solid, {
-                center + QPointF(-reach, reach),
-                center,
-                center + QPointF(reach, reach)
-            }, thickness);
+            // an arrow head with its tip on the aiming point, opening downwards.
+            // Both arms start on the center pixel, which is what keeps the tip
+            // closed without a mitre sticking out past the arms.
+            const int lastStep = diagonalStep(arm);
 
-            // The mitre at the tip runs further out than the arms do: the two
-            // segments meet at a right angle, which pushes the joint out by
-            // half the thickness over sin(45 degrees). Sizing the window by the
-            // arms alone used to cut the point of the arrow off.
-            geometry.halfExtent = qMax(halfThickness / DIAGONAL_REACH,
-                                       reach + halfThickness * DIAGONAL_REACH);
+            for (int dx = -1; dx <= 1; dx += 2) {
+                addDiagonalArm(geometry.solid, cx, cy, dx, 1, 0, lastStep, thickness);
+            }
+            geometry.halfExtent = diagonalReach(lastStep, thickness);
             break;
         }
 
