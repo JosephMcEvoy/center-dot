@@ -27,6 +27,7 @@ private slots:
     void on_lineThicknessSlider_valueChanged(int value);
     void on_gapSizeSlider_valueChanged(int value);
     void on_armLengthSlider_valueChanged(int value);
+    void on_contourWidthSlider_valueChanged(int value);
     void on_buttonBox_accepted();
 
     void on_xEdit_textEdited(const QString &arg1);

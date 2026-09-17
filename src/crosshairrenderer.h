@@ -36,6 +36,8 @@ const int MIN_GAP_SIZE      = 0;
 const int MAX_GAP_SIZE      = 30;
 const int MIN_ARM_LENGTH    = 1;
 const int MAX_ARM_LENGTH    = 40;
+const int MIN_CONTOUR_WIDTH = 0; // 0 switches the outline off
+const int MAX_CONTOUR_WIDTH = 5;
 
 // All styles in the order they are offered to the user.
 const QVector<StyleInfo> &styles();

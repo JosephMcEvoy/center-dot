@@ -264,13 +264,59 @@
         </layout>
        </item>
        <item row="5" column="0">
+        <widget class="QLabel" name="contourWidthLbl">
+         <property name="text">
+          <string>Outline:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <layout class="QHBoxLayout" name="contourWidthHbox">
+         <item>
+          <widget class="QSlider" name="contourWidthSlider">
+           <property name="toolTip">
+            <string>Width of the outline drawn around the crosshair. The outline sits outside the shape, so it adds this much on either side of every line. Drag to 0 to switch it off.</string>
+           </property>
+           <property name="minimum">
+            <number>0</number>
+           </property>
+           <property name="maximum">
+            <number>5</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::TicksBelow</enum>
+           </property>
+           <property name="tickInterval">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="contourWidthValueLbl">
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>1 px</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0">
         <widget class="QLabel" name="gapSizeLbl">
          <property name="text">
           <string>Center gap:</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="6" column="1">
         <layout class="QHBoxLayout" name="gapSizeHbox">
          <item>
           <widget class="QSlider" name="gapSizeSlider">
@@ -306,14 +352,14 @@
          </item>
         </layout>
        </item>
-       <item row="6" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="armLengthLbl">
          <property name="text">
           <string>Arm length:</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <layout class="QHBoxLayout" name="armLengthHbox">
          <item>
           <widget class="QSlider" name="armLengthSlider">
@@ -349,7 +395,7 @@
          </item>
         </layout>
        </item>
-       <item row="7" column="0">
+       <item row="8" column="0">
         <widget class="QLabel" name="contourColorLbl">
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
@@ -359,7 +405,7 @@
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="8" column="1">
         <layout class="QHBoxLayout" name="contourColorHbox">
          <item>
           <widget class="QFrame" name="contourColorBox">
@@ -383,14 +429,14 @@
          </item>
         </layout>
        </item>
-       <item row="8" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="fillColorLbl">
          <property name="text">
           <string>Fill color:</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="9" column="1">
         <layout class="QHBoxLayout" name="fillColorHbox">
          <item>
           <widget class="QFrame" name="fillColorBox">

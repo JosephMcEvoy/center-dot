@@ -135,6 +135,10 @@ void MainWindow::loadSettings()
                                                    CrosshairRenderer::MIN_ARM_LENGTH,
                                                    CrosshairRenderer::MAX_ARM_LENGTH);
 
+    currentSettings.contourWidth  = readBoundedInt(settings, "contourWidth", defaults.contourWidth,
+                                                   CrosshairRenderer::MIN_CONTOUR_WIDTH,
+                                                   CrosshairRenderer::MAX_CONTOUR_WIDTH);
+
     // read colors
     currentSettings.contourColor = readColor(settings, "contourColor", defaults.contourColor);
     currentSettings.fillColor    = readColor(settings, "fillColor", defaults.fillColor);
@@ -196,6 +200,7 @@ void MainWindow::saveSettings()
     settings.setValue("lineThickness", currentSettings.lineThickness);
     settings.setValue("gapSize", currentSettings.gapSize);
     settings.setValue("armLength", currentSettings.armLength);
+    settings.setValue("contourWidth", currentSettings.contourWidth);
 
     // colors
     settings.setValue("contourColor", currentSettings.contourColor.name(QColor::HexArgb));

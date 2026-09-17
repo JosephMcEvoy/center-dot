@@ -38,6 +38,12 @@ struct SettingsData {
     // length of a single line of the crosshair
     int armLength = 7;
 
+    // Width of the outline drawn around the crosshair, 0 draws none. The
+    // outline sits outside the shape rather than inside it, so it adds this
+    // much on every side: a line of n px with an outline of m px covers
+    // n + 2 * m pixels on screen.
+    int contourWidth = 1;
+
     QColor contourColor = QColor(Qt::black);
     QColor fillColor = QColor(Qt::white);
 };
