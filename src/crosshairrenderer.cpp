@@ -7,9 +7,6 @@
 
 namespace {
 
-// width in pixels of the contour drawn around the crosshair
-const int CONTOUR_WIDTH = 1;
-
 // factor between the length of a diagonal arm and its horizontal/vertical reach
 const qreal DIAGONAL_REACH = 0.7071067811865476; // cos(45 degrees)
 
@@ -348,7 +345,8 @@ int boundingSide(const SettingsData &settings)
     const Geometry geometry = buildGeometry(settings, 0, 0);
 
     // room for the contour plus one pixel for antialiasing on either side
-    const int half = qCeil(geometry.halfExtent) + CONTOUR_WIDTH + 1;
+    const int contour = qBound(MIN_CONTOUR_WIDTH, settings.contourWidth, MAX_CONTOUR_WIDTH);
+    const int half = qCeil(geometry.halfExtent) + contour + 1;
 
     // an odd edge length puts the center of the crosshair on the middle pixel
     return 2 * half + 1;
@@ -364,8 +362,16 @@ void paint(QPainter &painter, const SettingsData &settings, const QPointF &cente
 
     // The contour goes down first and is then covered by the fill. That hides
     // the seams where the shapes of a crosshair overlap each other.
-    if (settings.contourColor.alpha() > 0) {
-        const QPen contourPen(settings.contourColor, 2 * CONTOUR_WIDTH,
+    //
+    // The pen is twice as wide as the contour and runs along the outline of the
+    // shape, so half of it falls inside and is painted over by the fill, and
+    // half stays outside. The outline therefore grows the crosshair rather than
+    // eating into it: a line keeps the full thickness it was asked for and the
+    // contour adds contourWidth pixels on either side of it.
+    const int contourWidth = qBound(MIN_CONTOUR_WIDTH, settings.contourWidth, MAX_CONTOUR_WIDTH);
+
+    if (contourWidth > 0 && settings.contourColor.alpha() > 0) {
+        const QPen contourPen(settings.contourColor, 2 * contourWidth,
                               Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin);
         painter.strokePath(geometry.ring, contourPen);
         painter.strokePath(geometry.solid, contourPen);

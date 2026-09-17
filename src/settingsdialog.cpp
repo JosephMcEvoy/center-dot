@@ -1,4 +1,5 @@
 #include <QColorDialog>
+#include <QCoreApplication>
 #include <QDebug>
 
 #include "settingsdialog.h"
@@ -15,6 +16,13 @@ const char *PREVIEW_STYLE_SHEET = "background-color: #1e1e1e; border: 1px solid 
 QString pixelText(int value)
 {
     return QString::number(value) + " px";
+}
+
+// The outline can be switched off entirely, which reads better than "0 px".
+QString outlineText(int value)
+{
+    return value == 0 ? QCoreApplication::translate("SettingsDialog", "off")
+                      : pixelText(value);
 }
 
 } // namespace
@@ -36,6 +44,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
     ui.lineThicknessSlider->setRange(CrosshairRenderer::MIN_LINE_THICKNESS, CrosshairRenderer::MAX_LINE_THICKNESS);
     ui.gapSizeSlider->setRange(CrosshairRenderer::MIN_GAP_SIZE, CrosshairRenderer::MAX_GAP_SIZE);
     ui.armLengthSlider->setRange(CrosshairRenderer::MIN_ARM_LENGTH, CrosshairRenderer::MAX_ARM_LENGTH);
+    ui.contourWidthSlider->setRange(CrosshairRenderer::MIN_CONTOUR_WIDTH, CrosshairRenderer::MAX_CONTOUR_WIDTH);
 
     ui.previewLbl->setFixedSize(PREVIEW_SIZE);
     ui.previewLbl->setStyleSheet(PREVIEW_STYLE_SHEET);
@@ -60,6 +69,7 @@ void SettingsDialog::setSettingsData(const SettingsData &settingsData)
     ui.lineThicknessSlider->setValue(settingsData.lineThickness);
     ui.gapSizeSlider->setValue(settingsData.gapSize);
     ui.armLengthSlider->setValue(settingsData.armLength);
+    ui.contourWidthSlider->setValue(settingsData.contourWidth);
 
     // update color views
     showColorInBox(ui.contourColorBox, settingsData.contourColor);
@@ -100,6 +110,7 @@ void SettingsDialog::refreshControls()
     ui.lineThicknessValueLbl->setText(pixelText(settingsData.lineThickness));
     ui.gapSizeValueLbl->setText(pixelText(settingsData.gapSize));
     ui.armLengthValueLbl->setText(pixelText(settingsData.armLength));
+    ui.contourWidthValueLbl->setText(outlineText(settingsData.contourWidth));
 
     updatePreview();
 }
@@ -231,6 +242,16 @@ void SettingsDialog::on_armLengthSlider_valueChanged(int value)
     }
 
     settingsData.armLength = value;
+    refreshControls();
+}
+
+void SettingsDialog::on_contourWidthSlider_valueChanged(int value)
+{
+    if (updatingControls) {
+        return;
+    }
+
+    settingsData.contourWidth = value;
     refreshControls();
 }
 
